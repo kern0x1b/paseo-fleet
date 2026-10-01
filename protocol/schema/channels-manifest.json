@@ -20,7 +20,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["chat", "forge", "webhook", "email"]
+            "enum": ["chat", "forge", "webhook", "email", "local"]
           },
           "mcp_tool": {
             "type": "string",
