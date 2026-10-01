@@ -1,0 +1,40 @@
+{
+  "name": "paseo-fleet",
+  "version": "1.0.0",
+  "description": "Model-agnostic multi-agent fleet skills (Coordinator, Worker, Reviewer) and event protocol for Paseo",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "fleet": "./bin/fleet.js",
+    "paseo-fleet": "./bin/fleet.js"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "keywords": [
+    "paseo",
+    "ai-agents",
+    "multi-agent",
+    "orchestrator",
+    "coordinator",
+    "worker",
+    "reviewer",
+    "mcp",
+    "skills"
+  ],
+  "author": "kern0x1b",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kern0x1b/paseo-fleet.git"
+  },
+  "homepage": "https://github.com/kern0x1b/paseo-fleet#readme",
+  "bugs": {
+    "url": "https://github.com/kern0x1b/paseo-fleet/issues"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  }
+}
