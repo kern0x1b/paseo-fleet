@@ -51,21 +51,23 @@ COMMANDS:
   coordinator get                  Show current fleet coordinator agent ID
   coordinator clear                Clear current coordinator agent ID
   channel add <name> [options]     Register a push channel provider
-                                   Options: --tool <name> --cli <cmd> --type <chat|forge> --primary
+                                   Options: --tool <name> --cli <cmd> --type <chat|forge>
+                                            --instance <host|team> --scope <repo|channel>
+                                            --desc <text> --primary
   channel rm <name>                Remove a registered push channel
   channel ls                       List all registered push channels
   status                           Show coordinator liveness and registered channel health
   test-event [options]             Dispatch a synthetic test event envelope to the coordinator
-                                   Options: --channel <name> --dry-run
+                                   Options: --channel <name> --instance <id> --scope <id> --dry-run
   help                             Show this manual
 
 EXAMPLES:
   fleet init
   fleet coordinator set afe3e85b-e376-4b7f-a10b-5970ced5b432
-  fleet channel add slack --tool slack_send_message --cli "slack send" --type chat --primary
-  fleet channel add gitlab --tool gitlab_add_note --cli "gitlab comment" --type forge
+  fleet channel add slack:work --tool slack_send_message --cli "slack send" --type chat --instance T01WORK --scope C01DEV --primary
+  fleet channel add gitlab:corp --tool gitlab_create_issue_note --cli "gitlab comment" --type forge --instance https://gitlab.corp.net --scope core/backend
   fleet status
-  fleet test-event --channel slack
+  fleet test-event --channel slack:work
 `);
 }
 
@@ -127,6 +129,9 @@ async function main() {
             type: flags.type || 'chat',
             mcp_tool: flags.tool || null,
             cli_command: flags.cli || null,
+            instance: flags.instance || null,
+            scope: flags.scope || null,
+            description: flags.desc || flags.description || null,
             is_primary: Boolean(flags.primary),
           });
           console.log(`Channel '${name}' registered successfully.`);
@@ -150,9 +155,13 @@ async function main() {
           for (const key of keys) {
             const ch = channels[key];
             const star = manifest.primary_channel === key ? ' [primary]' : '';
-            console.log(
-              `- ${key}${star}: type=${ch.type}, tool=${ch.mcp_tool || 'none'}, cli=${ch.cli_command || 'none'}`,
-            );
+            const details = [];
+            if (ch.instance) details.push(`instance=${ch.instance}`);
+            if (ch.scope) details.push(`scope=${ch.scope}`);
+            if (ch.mcp_tool) details.push(`tool=${ch.mcp_tool}`);
+            if (ch.cli_command) details.push(`cli=${ch.cli_command}`);
+            const detailStr = details.length > 0 ? `, ${details.join(', ')}` : '';
+            console.log(`- ${key}${star}: type=${ch.type}${detailStr}`);
           }
         } else {
           console.error(`Unknown subcommand: ${sub}`);
@@ -184,6 +193,8 @@ async function main() {
         const channel = flags.channel || 'synthetic';
         const envelope = createEventEnvelope({
           source: channel,
+          instance: flags.instance || null,
+          scope: flags.scope || null,
           event_type: 'test_ping',
           content: 'Synthetic test event: verifying fleet connectivity',
           reply_action: {

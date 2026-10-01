@@ -30,6 +30,18 @@
             "type": "string",
             "description": "CLI command used to dispatch messages to this channel"
           },
+          "instance": {
+            "type": "string",
+            "description": "Instance host URL or workspace ID"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Default repository, project path, or channel ID"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of this channel"
+          },
           "default_target": {
             "type": "object",
             "description": "Default destination (e.g. channel ID or user ID)"

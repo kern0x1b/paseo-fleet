@@ -30,6 +30,9 @@ paseo send <coordinator_agent_id> '<event_envelope_json>' --no-wait
   "id": "evt_01jg84z9x2...",
   "timestamp": "2026-10-02T10:15:30Z",
   "source": "slack" | "gitlab" | "github" | "webhook" | "custom",
+  "instance": "https://gitlab.corp.net" | "T01WORKTEAM",
+  "scope": "core/backend" | "C12345678",
+  "urn": "urn:gitlab:gitlab.corp.net:core/backend:issue:142",
   "event_type": "dm" | "mention" | "review_reply" | "pipeline_failed" | "issue_assigned" | "alert",
   "actor": {
     "id": "U12345678",
@@ -55,18 +58,29 @@ paseo send <coordinator_agent_id> '<event_envelope_json>' --no-wait
 }
 ```
 
-### Required Fields
+### Protocol Fields
 
-| Field          | Type   | Description                                                         |
-| -------------- | ------ | ------------------------------------------------------------------- |
-| `protocol`     | string | Constant `"paseo-fleet/v1"`.                                        |
-| `id`           | string | Unique event ID for idempotency and deduplication.                  |
-| `timestamp`    | string | ISO-8601 creation timestamp.                                        |
-| `source`       | string | Originating platform identifier (e.g. `slack`, `gitlab`, `github`). |
-| `event_type`   | string | Semantic category of the inbound event.                             |
-| `actor`        | object | Initiator identity (`id`, `name`, `is_bot`).                        |
-| `content`      | string | Extracted text message, error message, or user request.             |
-| `reply_action` | object | Explicit target and parameters for sending replies.                 |
+| Field          | Type   | Status   | Description                                                                   |
+| -------------- | ------ | -------- | ----------------------------------------------------------------------------- |
+| `protocol`     | string | Required | Constant `"paseo-fleet/v1"`.                                                  |
+| `id`           | string | Required | Unique event ID for idempotency and deduplication.                            |
+| `timestamp`    | string | Required | ISO-8601 creation timestamp.                                                  |
+| `source`       | string | Required | Originating platform identifier (e.g. `slack`, `gitlab`, `github`).           |
+| `instance`     | string | Optional | Host URL or workspace ID for multi-instance disambiguation.                   |
+| `scope`        | string | Optional | Scoped project path, repo name, or channel ID.                                |
+| `urn`          | string | Optional | Fully qualified uniform resource name (e.g. `urn:gitlab:host:repo:issue:42`). |
+| `event_type`   | string | Required | Semantic category of the inbound event.                                       |
+| `actor`        | object | Required | Initiator identity (`id`, `name`, `is_bot`).                                  |
+| `content`      | string | Required | Extracted text message, error message, or user request.                       |
+| `reply_action` | object | Required | Explicit target and parameters for sending replies.                           |
+
+### Multi-Instance & Multi-Workspace Disambiguation
+
+When a fleet interacts with multiple Slack workspaces (e.g. Work vs Community) or multiple Git hosts (e.g. Self-hosted GitLab vs gitlab.com):
+
+1. **Deterministic Target URNs**: Resources are identified by compound identifiers (`urn:<platform>:<instance>:<scope>:<type>:<id>`).
+2. **Deterministic Reply Action**: The receiving agent never guesses which token or host to reply to; `reply_action.params` carries the exact target parameters.
+3. **Instance Aliases in Channels Registry**: Channels are registered with clear instance namespaces (`slack:work`, `slack:community`, `gitlab:corp`, `gitlab:public`).
 
 ---
 

@@ -20,6 +20,18 @@
       "type": "string",
       "description": "Originating platform identifier (e.g. slack, gitlab, github, telegram)"
     },
+    "instance": {
+      "type": "string",
+      "description": "Instance host URL or workspace ID for multi-instance disambiguation (e.g. https://gitlab.corp.net, T012345)"
+    },
+    "scope": {
+      "type": "string",
+      "description": "Scoped project path, repository, or channel identifier (e.g. core/backend, C012345)"
+    },
+    "urn": {
+      "type": "string",
+      "description": "Fully qualified uniform resource name (e.g. urn:gitlab:gitlab.corp.net:core/backend:issue:42)"
+    },
     "event_type": {
       "type": "string",
       "description": "Event category (e.g. dm, mention, review_reply, pipeline_failed, issue_assigned)"

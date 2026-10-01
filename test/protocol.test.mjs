@@ -27,9 +27,16 @@ describe('Paseo Fleet Protocol', () => {
   it('validates a correct envelope', () => {
     const envelope = createEventEnvelope({
       source: 'gitlab',
+      instance: 'https://gitlab.corp.net',
+      scope: 'core/backend',
+      urn: 'urn:gitlab:gitlab.corp.net:core/backend:issue:42',
       event_type: 'pipeline_failed',
       content: 'CI failure',
     });
+
+    assert.equal(envelope.instance, 'https://gitlab.corp.net');
+    assert.equal(envelope.scope, 'core/backend');
+    assert.equal(envelope.urn, 'urn:gitlab:gitlab.corp.net:core/backend:issue:42');
 
     const result = validateEventEnvelope(envelope);
     assert.equal(result.valid, true);

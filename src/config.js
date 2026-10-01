@@ -72,6 +72,9 @@ export function addChannel(name, options) {
     type: options.type || 'chat',
     mcp_tool: options.mcp_tool || null,
     cli_command: options.cli_command || null,
+    instance: options.instance || null,
+    scope: options.scope || null,
+    description: options.description || null,
     default_target: options.default_target || null,
     capabilities: options.capabilities || [],
   };
