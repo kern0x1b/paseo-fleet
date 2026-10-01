@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import {
   ensureFleetDir,
   getConfigPath,
@@ -15,6 +15,44 @@ import { createEventEnvelope } from '../src/protocol.js';
 
 const args = process.argv.slice(2);
 const command = args[0] || 'help';
+
+function isPidAlive(pid) {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function checkSlackDaemon() {
+  try {
+    const out = execSync('slack daemon status', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const data = JSON.parse(out);
+    if (data && data.running && data.pid && isPidAlive(data.pid)) {
+      return { running: true, pid: data.pid };
+    }
+  } catch {}
+  return { running: false, pid: null };
+}
+
+function checkGitLabDaemon() {
+  try {
+    const out = execSync('gitlab daemon status', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const data = JSON.parse(out);
+    if (data && data.running && data.pid && isPidAlive(data.pid)) {
+      return { running: true, pid: data.pid };
+    }
+  } catch {}
+  return { running: false, pid: null };
+}
 
 function parseFlags(rawArgs) {
   const flags = {};
@@ -114,15 +152,37 @@ async function main() {
           console.log(`Bound to gitlab daemon.`);
         } catch {}
 
-        try {
-          execSync(`slack daemon start`, { stdio: 'ignore' });
-          console.log(`Started slack daemon.`);
-        } catch {}
+        const slackStatus = checkSlackDaemon();
+        if (slackStatus.running) {
+          console.log(`Slack daemon is already running (PID ${slackStatus.pid}).`);
+        } else {
+          try {
+            const child = spawn('slack', ['daemon'], {
+              detached: true,
+              stdio: 'ignore',
+            });
+            child.unref();
+            console.log(`Started slack daemon in background (PID ${child.pid}).`);
+          } catch (err) {
+            console.error(`Failed to start slack daemon: ${err.message}`);
+          }
+        }
 
-        try {
-          execSync(`gitlab daemon start`, { stdio: 'ignore' });
-          console.log(`Started gitlab daemon.`);
-        } catch {}
+        const gitlabStatus = checkGitLabDaemon();
+        if (gitlabStatus.running) {
+          console.log(`GitLab daemon is already running (PID ${gitlabStatus.pid}).`);
+        } else {
+          try {
+            const child = spawn('gitlab', ['daemon', '--all-hours'], {
+              detached: true,
+              stdio: 'ignore',
+            });
+            child.unref();
+            console.log(`Started gitlab daemon in background (PID ${child.pid}).`);
+          } catch (err) {
+            console.error(`Failed to start gitlab daemon: ${err.message}`);
+          }
+        }
 
         const manifest = loadChannels();
         const active = Object.keys(manifest.channels || {});
@@ -144,7 +204,15 @@ async function main() {
           console.log(`Stopped gitlab daemon.`);
         } catch {}
 
-        console.log(`Fleet daemons stopped.`);
+        saveConfig({ coordinatorAgentId: null });
+        try {
+          execSync(`slack unset-coordinator`, { stdio: 'ignore' });
+        } catch {}
+        try {
+          execSync(`gitlab unset-coordinator`, { stdio: 'ignore' });
+        } catch {}
+
+        console.log(`Fleet daemons stopped and coordinator cleared.`);
         break;
       }
 
@@ -241,12 +309,20 @@ async function main() {
         const config = loadConfig();
         const manifest = loadChannels();
         const keys = Object.keys(manifest.channels || {});
+        const slackStatus = checkSlackDaemon();
+        const gitlabStatus = checkGitLabDaemon();
 
         console.log(`Paseo Fleet Status`);
         console.log(`------------------`);
         console.log(`Coordinator Agent: ${config.coordinatorAgentId || 'Not configured'}`);
         console.log(`Primary Channel:   ${manifest.primary_channel || 'Not configured'}`);
         console.log(`Active Channels:   ${keys.length > 0 ? keys.join(', ') : 'None registered'}`);
+        console.log(
+          `Slack Daemon:      ${slackStatus.running ? `Running (PID ${slackStatus.pid})` : 'Stopped'}`,
+        );
+        console.log(
+          `GitLab Daemon:     ${gitlabStatus.running ? `Running (PID ${gitlabStatus.pid})` : 'Stopped'}`,
+        );
         break;
       }
 
