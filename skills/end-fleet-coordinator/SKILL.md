@@ -22,7 +22,8 @@ This command automatically:
 
 1. Terminates the running Slack event listener daemon (`slack daemon stop`).
 2. Terminates the running GitLab event router daemon (`gitlab daemon stop`).
-3. Ensures no background polling or WebSocket connections remain active.
+3. Clears active coordinator bindings so no orphaned events are dispatched.
+4. Ensures no background polling or WebSocket connections remain active.
 
 ---
 
