@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Community Discussions
+    url: https://github.com/kern0x1b/paseo-fleet/discussions
+    about: Discuss architecture, protocols, and multi-agent roles.
