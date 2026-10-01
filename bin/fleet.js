@@ -59,10 +59,13 @@ COMMANDS:
   status                           Show coordinator liveness and registered channel health
   test-event [options]             Dispatch a synthetic test event envelope to the coordinator
                                    Options: --channel <name> --instance <id> --scope <id> --dry-run
+  activate [agent-id]              Self-activate current agent ($PASEO_AGENT_ID) as coordinator and start daemons
+  stop                             Stop all background fleet push daemons
   help                             Show this manual
 
 EXAMPLES:
   fleet init
+  fleet activate
   fleet coordinator set afe3e85b-e376-4b7f-a10b-5970ced5b432
   fleet channel add slack:work --tool slack_send_message --cli "slack send" --type chat --instance T01WORK --scope C01DEV --primary
   fleet channel add gitlab:corp --tool gitlab_create_issue_note --cli "gitlab comment" --type forge --instance https://gitlab.corp.net --scope core/backend
@@ -84,10 +87,74 @@ async function main() {
         break;
       }
 
+      case 'start':
+      case 'activate': {
+        let id = positional[0] || process.env.PASEO_AGENT_ID;
+        if (!id) {
+          const cfg = loadConfig();
+          id = cfg.coordinatorAgentId;
+        }
+        if (!id) {
+          console.error(
+            'Error: cannot resolve coordinator agent ID. Run within Paseo or specify: fleet activate <agent-id>',
+          );
+          process.exit(1);
+        }
+
+        saveConfig({ coordinatorAgentId: id });
+        console.log(`Coordinator agent ID set to: ${id}`);
+
+        try {
+          execSync(`slack set-coordinator ${id}`, { stdio: 'ignore' });
+          console.log(`Bound to slack daemon.`);
+        } catch {}
+
+        try {
+          execSync(`gitlab set-coordinator ${id}`, { stdio: 'ignore' });
+          console.log(`Bound to gitlab daemon.`);
+        } catch {}
+
+        try {
+          execSync(`slack daemon start`, { stdio: 'ignore' });
+          console.log(`Started slack daemon.`);
+        } catch {}
+
+        try {
+          execSync(`gitlab daemon start`, { stdio: 'ignore' });
+          console.log(`Started gitlab daemon.`);
+        } catch {}
+
+        const manifest = loadChannels();
+        const active = Object.keys(manifest.channels || {});
+        console.log(`Fleet Coordinator successfully activated!`);
+        console.log(`Active channels: ${active.join(', ') || 'none'}`);
+        console.log(`Listening for inbound events.`);
+        break;
+      }
+
+      case 'stop':
+      case 'deactivate': {
+        try {
+          execSync(`slack daemon stop`, { stdio: 'ignore' });
+          console.log(`Stopped slack daemon.`);
+        } catch {}
+
+        try {
+          execSync(`gitlab daemon stop`, { stdio: 'ignore' });
+          console.log(`Stopped gitlab daemon.`);
+        } catch {}
+
+        console.log(`Fleet daemons stopped.`);
+        break;
+      }
+
       case 'coordinator': {
         const sub = positional[0] || 'get';
         if (sub === 'set') {
-          const id = positional[1];
+          let id = positional[1];
+          if (!id || id === 'self') {
+            id = process.env.PASEO_AGENT_ID;
+          }
           if (!id) {
             console.error('Error: missing agent ID. Usage: fleet coordinator set <agent-id>');
             process.exit(1);

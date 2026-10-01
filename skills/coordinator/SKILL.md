@@ -9,6 +9,23 @@ The **Fleet Coordinator** is the central orchestrator of the agent fleet. It rec
 
 ---
 
+## Autonomous Self-Activation (Zero Manual Work)
+
+When starting a session as Coordinator or when asked to coordinate, immediately run:
+
+```bash
+fleet activate
+```
+
+This autonomously:
+
+1. Detects your agent ID (`$PASEO_AGENT_ID`).
+2. Registers your ID as the active Coordinator across the fleet (`fleet`, `slack`, `gitlab`).
+3. Launches background push daemons (`gitlab daemon start`, `slack daemon start`) if not already running.
+4. Verifies active channels and prepares your session for incoming events.
+
+---
+
 ## Core Responsibilities
 
 1. **Inbound Triage & Deduplication**:
