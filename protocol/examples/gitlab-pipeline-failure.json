@@ -1,0 +1,28 @@
+{
+  "$schema": "https://getpaseo.com/schemas/fleet-event-v1.json",
+  "protocol": "paseo-fleet/v1",
+  "id": "evt_gl_pipe_98231",
+  "timestamp": "2026-10-02T08:35:12Z",
+  "source": "gitlab",
+  "event_type": "pipeline_failed",
+  "actor": {
+    "id": "gitlab-ci",
+    "name": "GitLab CI",
+    "is_bot": true
+  },
+  "target": {
+    "type": "mr",
+    "id": "42",
+    "title": "Fix token refresh in authentication middleware",
+    "url": "https://gitlab.example.com/team/core-api/-/merge_requests/42"
+  },
+  "content": "Pipeline #98231 failed on job test-e2e for branch feature/auth-fix. Failed step: token_expiration_spec.ts.",
+  "reply_action": {
+    "type": "mcp",
+    "tool": "gitlab_add_note",
+    "command": "gitlab comment",
+    "params": {
+      "mr_id": 42
+    }
+  }
+}

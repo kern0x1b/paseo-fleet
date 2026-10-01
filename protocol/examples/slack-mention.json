@@ -1,0 +1,28 @@
+{
+  "$schema": "https://getpaseo.com/schemas/fleet-event-v1.json",
+  "protocol": "paseo-fleet/v1",
+  "id": "evt_slack_1727200000_123",
+  "timestamp": "2026-10-02T08:30:00Z",
+  "source": "slack",
+  "event_type": "mention",
+  "actor": {
+    "id": "U12345678",
+    "name": "alex.dev",
+    "is_bot": false
+  },
+  "target": {
+    "type": "thread",
+    "id": "1727200000.123",
+    "title": "Discussion in #dev-ops"
+  },
+  "content": "@coordinator please investigate why the cache warmup script is taking 20 minutes on staging",
+  "reply_action": {
+    "type": "mcp",
+    "tool": "slack_send_message",
+    "command": "slack send",
+    "params": {
+      "channel": "C12345678",
+      "thread_ts": "1727200000.123"
+    }
+  }
+}

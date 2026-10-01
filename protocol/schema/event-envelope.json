@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PaseoFleetEventEnvelope",
+  "type": "object",
+  "required": ["protocol", "id", "timestamp", "source", "event_type", "actor", "content", "reply_action"],
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "const": "paseo-fleet/v1"
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique event identifier"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "string",
+      "description": "Originating platform identifier (e.g. slack, gitlab, github, telegram)"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Event category (e.g. dm, mention, review_reply, pipeline_failed, issue_assigned)"
+    },
+    "actor": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "is_bot": { "type": "boolean", "default": false }
+      }
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "content": {
+      "type": "string",
+      "description": "Human-readable payload or instruction"
+    },
+    "reply_action": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["mcp", "cli", "none"]
+        },
+        "tool": {
+          "type": "string",
+          "description": "MCP tool name (e.g. slack_send_message)"
+        },
+        "command": {
+          "type": "string",
+          "description": "CLI command prefix (e.g. slack send)"
+        },
+        "params": {
+          "type": "object",
+          "description": "Key-value parameters to pass to the tool or command"
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}
