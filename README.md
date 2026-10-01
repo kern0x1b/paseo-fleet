@@ -1,5 +1,10 @@
 # `paseo-fleet` (`fleet`)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/Node-%E2%89%A520-3c873a.svg)](https://nodejs.org)
+[![Tests: node --test](https://img.shields.io/badge/tests-node%20--test-brightgreen.svg)](test)
+[![Code style: Prettier](https://img.shields.io/badge/code%20style-prettier-ff69b4.svg)](https://prettier.io)
+
 Model-agnostic multi-agent fleet skills (**Coordinator**, **Worker**, **Reviewer**) and open event protocol for [Paseo](https://getpaseo.com), Claude Code, and Antigravity.
 
 Enables autonomous agent teams to triage incoming events from external channels (Slack, GitLab, GitHub, Telegram), execute implementations in isolated git worktrees, gate on independent adversarial review, and report outcomes seamlessly without hardcoded model or tool dependencies.
@@ -46,65 +51,116 @@ Enables autonomous agent teams to triage incoming events from external channels 
 
 ---
 
-## The Three Fleet Roles
+## Fleet Skills & Roles
 
-| Role                                   | Responsibility                                                                                                                                                      | Workspace Isolation                  | Key Output                                  |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------- |
-| **Coordinator** (`skills/coordinator`) | Receives events, triages priorities, plans subtasks, provisions worktrees, delegates to Workers/Reviewers, and sends outbound notifications.                        | Main or local session                | Subtask delegation & final channel response |
-| **Worker** (`skills/worker`)           | Implements code changes, writes reproduction tests (TDD), verifies locally with test suites, and produces structured completion reports.                            | Isolated Git Worktree (`branch-off`) | Verified Git diff & test proof              |
-| **Reviewer** (`skills/reviewer`)       | Evaluates Worker diffs with independent perspective, inspects edge cases & security invariants, and issues definitive verdicts (`APPROVED` or `CHANGES_REQUESTED`). | Fresh review session                 | Decisive review assessment & feedback       |
+`paseo-fleet` provides ready-to-use skills for both user invocation and autonomous subagent delegation:
+
+### User-Invocable Skills
+
+| Skill                 | Invocation Command         | Description                                                                                                                                                                      |
+| --------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Start Coordinator** | `/start-fleet-coordinator` | **One-touch autonomous activation.** Self-detects `$PASEO_AGENT_ID`, binds to Slack & GitLab routers, launches background daemons, verifies push channels, and begins listening. |
+| **End Coordinator**   | `/end-fleet-coordinator`   | **One-touch shutdown.** Sends `SIGTERM` to all background daemons, clears coordinator bindings, and deactivates event routing. Alias: `/stop-fleet-coordinator`.                 |
+| **Fleet Setup**       | `fleet-setup`              | Automatically discovers installed CLI push adapters (`which slack`, `which gitlab`), provisions directories, registers channels, and verifies connectivity.                      |
+
+### Autonomous Agent Roles
+
+| Role            | Skill Path           | Workspace Isolation                  | Key Responsibility                                                                                                                                                  |
+| --------------- | -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Coordinator** | `skills/coordinator` | Active session                       | Triages incoming `paseo-fleet/v1` envelopes, decomposes complex tasks, provisions git worktrees, delegates to Workers/Reviewers, and sends outbound notifications.  |
+| **Worker**      | `skills/worker`      | Isolated Git Worktree (`branch-off`) | Implements code changes, writes reproduction tests (TDD), verifies locally with test suites, and produces structured completion reports.                            |
+| **Reviewer**    | `skills/reviewer`    | Independent review session           | Evaluates Worker diffs with independent perspective, inspects edge cases & security invariants, and issues definitive verdicts (`APPROVED` or `CHANGES_REQUESTED`). |
 
 ---
 
-## Key Design Principles
+## Autonomous Lifecycle: Zero Manual Work
 
-1. **Model & Provider Agnostic**: Roles specify operational contracts, decision matrices, and verification gates. They never hardcode `gpt-4`, `claude-3-7`, or specific LLM providers.
-2. **Pluggable Event Routing**: Tools like [paseo-slack](https://github.com/kern0x1b/paseo-slack) and [paseo-gitlab](https://github.com/kern0x1b/paseo-gitlab) push events to the fleet via the open [Paseo Fleet Protocol](protocol/fleet-protocol.md).
-3. **No Tool Name Collisions**: Integrations retain distinct, unambiguous tool names (`slack_send_message`, `gitlab_add_note`). Events self-describe their exact reply actions.
-4. **Zero Manual Configuration**: Users never edit JSON files by hand. The included `fleet-setup` skill empowers agents to discover tools, set up coordinators, and bind channels autonomously.
+Start and stop the entire multi-agent fleet with zero manual file editing:
+
+```bash
+# 1. Activate the current agent session as Coordinator and launch background daemons
+fleet activate
+
+# 2. Check coordinator liveness, channels, and background daemon status
+fleet status
+
+# 3. Cleanly shut down daemons and unbind coordinator
+fleet stop
+```
+
+When running inside a Paseo agent session, invoking `/start-fleet-coordinator` automatically calls `fleet activate`, which:
+
+1. Detects the unique session ID (`$PASEO_AGENT_ID`).
+2. Registers the ID as the active Coordinator in `~/.config/paseo/fleet/config.json`.
+3. Binds the ID to the Slack daemon (`slack set-coordinator <id>`).
+4. Binds the ID to the GitLab daemon (`gitlab set-coordinator <id>`).
+5. Checks if daemons are already running; if not, spawns them in background (`slack daemon` and `gitlab daemon --all-hours`).
+6. Reads `~/.config/paseo/fleet/channels.json` and reports ready channels.
 
 ---
 
-## Quickstart: Automated Setup
+## Multi-Project & Multi-Instance Isolation
 
-When paired with an AI assistant in Paseo:
+The fleet protocol prevents collisions across multiple projects, repositories, and workspaces using explicit routing scopes:
 
-> **User Prompt**: _"Set up my fleet coordinator and connect my Slack and GitLab adapters."_
+```json
+{
+  "channels": {
+    "slack:work": {
+      "type": "chat",
+      "instance": "T0123456789",
+      "scope": null,
+      "mcp_tool": "slack_send_message",
+      "cli_command": "slack send",
+      "description": "Work Slack workspace",
+      "is_primary": true
+    },
+    "gitlab:work": {
+      "type": "forge",
+      "instance": "https://gitlab.example.com",
+      "scope": "team/project",
+      "mcp_tool": "gitlab_create_issue_note",
+      "cli_command": "gitlab comment",
+      "description": "Work GitLab (team/project)"
+    }
+  },
+  "primary_channel": "slack:work"
+}
+```
 
-The assistant uses the autonomous setup skill (`skills/fleet-setup`) to:
-
-1. Initialize fleet configuration via `fleet init`.
-2. Ensure a Coordinator agent session is provisioned.
-3. Automatically discover installed adapters (`which slack`, `which gitlab`).
-4. Register channels and bind daemons via `fleet coordinator set <id>`.
-5. Run an end-to-end verification ping.
+- **`instance`**: Uniquely identifies the team, tenant, or host (e.g. Slack Team `T0123456789`, GitLab host `https://gitlab.example.com`).
+- **`scope`**: Identifies the specific repository, project, or channel namespace (e.g. `team/project` or `C01DEV`).
+- **`urn`**: Globally unique uniform resource name (`urn:gitlab:gitlab.example.com:team/project:issue:42`), enabling 100% idempotent deduplication across agents.
 
 ---
 
 ## CLI Reference (`fleet`)
 
-The repository includes a standalone zero-dependency CLI for fleet lifecycle management:
-
 ```bash
 # Initialize fleet directories (~/.config/paseo/fleet/)
 fleet init
 
-# Configure active coordinator agent
-fleet coordinator set <agent-id>
-fleet coordinator get
-fleet coordinator clear
+# Activate current agent ($PASEO_AGENT_ID) as coordinator & start daemons
+fleet activate
 
-# Register and inspect channels
-fleet channel add slack --tool slack_send_message --cli "slack send" --type chat --primary
-fleet channel add gitlab --tool gitlab_add_note --cli "gitlab comment" --type forge
-fleet channel ls
-fleet channel rm <name>
-
-# Check fleet status and connected channels
+# Check fleet status, coordinator binding, and background daemon health
 fleet status
 
-# Send a synthetic test event to verify round-trip delivery
-fleet test-event --channel slack
+# Register a push channel provider
+fleet channel add slack:work --tool slack_send_message --cli "slack send" --type chat --instance T0123456789 --primary
+fleet channel add gitlab:work --tool gitlab_create_issue_note --cli "gitlab comment" --type forge --instance https://gitlab.example.com --scope team/project
+
+# Inspect registered channels
+fleet channel ls
+
+# Remove a channel
+fleet channel rm gitlab:work
+
+# Dispatch synthetic test event to verify round-trip delivery
+fleet test-event --channel slack:work
+
+# Stop all background daemons and unbind coordinator
+fleet stop
 ```
 
 ---

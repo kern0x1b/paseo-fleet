@@ -13,17 +13,19 @@ external push event sources (e.g. `paseo-slack`, `paseo-gitlab`, `paseo-github`,
 
 ## Layout
 
-| Path                  | Purpose                                                                                     |
-| --------------------- | ------------------------------------------------------------------------------------------- |
-| `protocol/`           | Open Fleet Event Protocol specification, JSON schemas, author guide, and envelope examples. |
-| `skills/coordinator/` | Fleet Coordinator orchestrator skill (triage matrix, workspace dispatch lifecycle).         |
-| `skills/worker/`      | Fleet Worker implementation skill (worktree isolation, TDD, completion reports).            |
-| `skills/reviewer/`    | Fleet Reviewer quality gate skill (adversarial audit, security, review rubric).             |
-| `skills/fleet-setup/` | Autonomous fleet setup skill for agents (zero manual configuration).                        |
-| `bin/fleet.js`        | Executable CLI for fleet initialization, channel registration, and status checks.           |
-| `src/config.js`       | Safe manager for `~/.config/paseo/fleet/` configuration and channels registry.              |
-| `src/protocol.js`     | Standard envelope factory and schema validation.                                            |
-| `test/`               | Automated test suite run via `node --test test/`.                                           |
+| Path                              | Purpose                                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------- |
+| `protocol/`                       | Open Fleet Event Protocol specification, JSON schemas, author guide, and envelope examples. |
+| `skills/start-fleet-coordinator/` | One-touch user skill to self-activate coordinator session and start daemons.                |
+| `skills/end-fleet-coordinator/`   | One-touch user skill to stop daemons and clear coordinator bindings.                        |
+| `skills/coordinator/`             | Fleet Coordinator orchestrator skill (triage matrix, workspace lifecycle).                  |
+| `skills/worker/`                  | Fleet Worker implementation skill (worktree isolation, TDD, completion).                    |
+| `skills/reviewer/`                | Fleet Reviewer quality gate skill (adversarial audit, security, rubric).                    |
+| `skills/fleet-setup/`             | Autonomous fleet setup skill for agents (zero manual configuration).                        |
+| `bin/fleet.js`                    | Executable CLI for fleet initialization, channel registration, and status checks.           |
+| `src/config.js`                   | Safe manager for `~/.config/paseo/fleet/` configuration and channels registry.              |
+| `src/protocol.js`                 | Standard envelope factory and schema validation.                                            |
+| `test/`                           | Automated test suite run via `node --test test/`.                                           |
 
 ## Commands
 
