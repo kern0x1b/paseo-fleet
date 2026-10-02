@@ -81,10 +81,13 @@ Start and stop the entire multi-agent fleet with zero manual file editing:
 # 1. Activate the current agent session as Coordinator and launch background daemons
 fleet activate
 
-# 2. Check coordinator liveness, channels, and background daemon status
+# 2. Collect everything that was already waiting on you from every adapter
+fleet sweep
+
+# 3. Check coordinator liveness, channels, and background daemon status
 fleet status
 
-# 3. Cleanly shut down daemons and unbind coordinator
+# 4. Cleanly shut down daemons and unbind coordinator
 fleet stop
 ```
 
@@ -96,6 +99,8 @@ When running inside a Paseo agent session, invoking `/start-fleet-coordinator` a
 4. Binds the ID to the GitLab daemon (`gitlab set-coordinator <id>`).
 5. Checks if daemons are already running; if not, spawns them in background (`slack daemon` and `gitlab daemon --all-hours`).
 6. Reads `~/.config/paseo/fleet/channels.json` and reports ready channels.
+
+The skill then runs `fleet sweep`, verifies every item against its source, presents a prioritised plan, dispatches Workers for the items that need code, and queues every outbound action (messages, comments, pushes, merge requests) for the user's approval before it starts listening for new events.
 
 ---
 
@@ -145,6 +150,11 @@ fleet activate
 
 # Check fleet status, coordinator binding, and background daemon health
 fleet status
+
+# Collect waiting work from every adapter (default: since the last sweep, at least 24h back)
+fleet sweep
+fleet sweep --since 3d --adapters gitlab
+fleet sweep --no-cursor   # do not move the cursor
 
 # Register a push channel provider
 fleet channel add slack:work --tool slack_send_message --cli "slack send" --type chat --instance T0123456789 --primary

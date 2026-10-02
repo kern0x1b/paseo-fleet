@@ -1,52 +1,51 @@
 ---
 name: start-fleet-coordinator
-description: Start the Fleet Coordinator session: automatically binds your agent ID, launches background push daemons (GitLab, Slack), verifies channels, and begins listening for inbound fleet events.
+description: Start the Fleet Coordinator session: binds your agent ID, launches background push daemons, sweeps every adapter for work that was already waiting, verifies it, presents a prioritised plan, dispatches workers, and then listens for inbound fleet events.
 user-invocable: true
-argument-hint: "[--dry-run]"
+argument-hint: "[--since <iso|24h|3d>]"
 ---
 
 # Start Fleet Coordinator
 
-Use this skill to activate the current Paseo agent session as the autonomous Fleet Coordinator.
+Activate the current Paseo agent session as the Fleet Coordinator, catch up on everything that was waiting before activation, and only then switch to live event handling.
 
 ---
 
-## Autonomous Activation Procedure
-
-Immediately execute the following activation command:
+## 1. Activate
 
 ```bash
 fleet activate
 ```
 
-This single command automatically performs all necessary setup:
+This registers `$PASEO_AGENT_ID` as the coordinator, binds it to every adapter daemon, starts the daemons that are not running, and lists the registered channels.
 
-1. Detects your session's unique identifier (`$PASEO_AGENT_ID`).
-2. Registers your ID as the active Coordinator in `~/.config/paseo/fleet/config.json`.
-3. Binds your ID to the Slack daemon (`slack set-coordinator <id>`).
-4. Binds your ID to the GitLab daemon (`gitlab set-coordinator <id>`).
-5. Launches background push daemons (`slack daemon start` and `gitlab daemon start`) if they are not already running.
-6. Verifies active channels from `~/.config/paseo/fleet/channels.json`.
+Daemons only report events that happen after they start. Work that was already waiting is not pushed; step 2 collects it.
 
----
+## 2. Sweep
 
-## Confirmation & Reporting
+```bash
+fleet sweep
+```
 
-After executing `fleet activate`, print a clear status confirmation to the user:
+Pass the user's `--since` argument through if one was given. The command prints one `paseo-fleet/v1` sweep document:
 
-- **Coordinator Agent ID**: your `$PASEO_AGENT_ID`.
-- **Connected Daemons**: Slack daemon (Socket Mode) and GitLab daemon (Polling).
-- **Active Push Channels**: List the active channels (e.g. `slack:work`, `gitlab:work`).
-- **Readiness**: State that you are now listening for inbound events and ready to orchestrate incoming tasks.
+- `sources`: every adapter that was asked, whether it answered, and which identity it ran as.
+- `items`: deduplicated envelopes, each with a `reply_action` and a `snapshot` block (`reasons` and raw `state`).
+- `errors`: everything that could not be read. Report these to the user; never present a partial sweep as complete.
 
----
+The sweep is the starting list, not the boundary. Use the adapters' CLI and MCP tools for anything an item needs beyond it.
 
-## Coordinator Responsibilities
+## 3. Verify, prioritise, present
 
-Once activated, your session operates as the central orchestrator for the repository:
+Follow [startup-sweep.md](../coordinator/references/startup-sweep.md): check every item against the thing it describes, drop what needs nothing, order the rest, and present the plan to the user before acting on it.
 
-1. **Inbound Events**: Parse incoming `paseo-fleet/v1` event envelopes sent by daemons.
-2. **Triage & Decomposition**: Break down bug reports, mentions, or pipeline alerts into well-bounded tasks.
-3. **Worker Delegation**: For code changes, spawn Worker agents in isolated git worktrees (`create_workspace` with `isolation: "worktree"`).
-4. **Reviewer Quality Gate**: Spawn a Reviewer agent to verify tests and diffs before merging or closing.
-5. **Deterministic Outbound Reply**: Dispatch completion reports and replies using the payload's `reply_action` or the primary channel (`slack:work`).
+## 4. Dispatch
+
+Within the Authority Rules of the [coordinator skill](../coordinator/SKILL.md):
+
+- Start investigations and Worker agents in isolated worktrees for the items that need code or analysis.
+- Queue every outbound action (message, comment, push, merge request, merge) as a draft for the user's explicit approval.
+
+## 5. Listen
+
+Report the coordinator ID, running daemons, active channels, the plan, and what was dispatched. Then process inbound `paseo-fleet/v1` envelopes as they arrive, deduplicating them by `urn` against the items already in the plan.

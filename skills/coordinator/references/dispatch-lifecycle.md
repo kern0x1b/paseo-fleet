@@ -34,7 +34,7 @@ This document describes the step-by-step state machine for executing work throug
        ▼ Verdict: APPROVED
 (FINALIZE_AND_NOTIFY)
        │
-       ▼ Push branch / notify user via reply_action
+       ▼ Draft push / reply_action, execute after user approval
      [DONE]
 ```
 

@@ -137,6 +137,43 @@ Tools register themselves via the `fleet channel add` command without requiring 
                          │           ├─ Verifies invariants & tests
                          │           └─ Returns Verdict (APPROVED / CHANGES)
                          │
-                         └── 3. Dispatches reply via reply_action or primary channel
-                             └─► [Outbound Notification]
+                         └── 3. Drafts reply via reply_action or primary channel,
+                             └─► [Outbound Notification after user approval]
 ```
+
+---
+
+## 5. Snapshot (Pull) Contract
+
+Push events only cover what happens while a daemon runs. The snapshot contract covers what is already waiting when the coordinator starts.
+
+Every adapter provides:
+
+```bash
+<adapter> snapshot [--since <iso-timestamp>]
+```
+
+It prints one JSON document to stdout and exits:
+
+```json
+{
+  "protocol": "paseo-fleet/v1",
+  "source": "gitlab",
+  "instance": "https://gitlab.example.com",
+  "actor": "me.user",
+  "generated_at": "2026-10-02T08:00:00.000Z",
+  "items": [],
+  "errors": [{ "source": "todos", "error": "GitLab API error 503" }]
+}
+```
+
+- `items` are regular event envelopes (section 2) with one extra block, `snapshot`:
+  - `reasons`: why the item is waiting on the actor (e.g. `mr_reviewer`, `todo_review_requested`, `unanswered_dm`).
+  - `state`: raw platform facts the coordinator needs to verify the item (pipeline status, approvals, message count).
+- Items are deduplicated by `urn` inside one adapter; reasons of merged items are combined.
+- `actor` is the identity the adapter's credentials resolve to. No user or project identifiers are configured for the snapshot.
+- `since` bounds time-based sources (messages). State-based sources (open merge requests, pending to-dos, assigned issues) ignore it: they are waiting until they are closed.
+- A failing source goes to `errors`; the other sources are still returned. The command exits non-zero only when it cannot authenticate.
+- Snapshots are read-only. They never mark anything as read or done.
+
+`fleet sweep` runs the snapshot of every configured adapter (`config.json` → `adapters`, default `slack` and `gitlab`), merges items across adapters by `urn`, and stores the sweep time as the cursor for the next run.

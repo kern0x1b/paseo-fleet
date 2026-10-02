@@ -24,6 +24,19 @@ This autonomously:
 3. Launches background push daemons (`gitlab daemon start`, `slack daemon start`) if not already running.
 4. Verifies active channels and prepares your session for incoming events.
 
+Daemons only push events that happen after they start. Immediately after activation, run `fleet sweep` to collect the work that was already waiting, then verify and plan it as described in [startup-sweep.md](references/startup-sweep.md) before listening for new events.
+
+---
+
+## Authority Rules
+
+The coordinator acts on its own inside the machine and asks before it acts outside it.
+
+- **Autonomous**: reading any source, investigations, spawning Workers and Reviewers in isolated worktrees, local builds and tests, local commits on worker branches.
+- **Requires the user's explicit approval of the exact draft**: sending a message, posting a comment or review, pushing a branch, opening or updating a merge request, merging, closing, labelling or assigning anything, and any other write to an external system.
+
+Present each outbound action as a draft naming the target (channel, thread, merge request) and wait for approval. Approval covers that draft only.
+
 ---
 
 ## Core Responsibilities
@@ -51,12 +64,13 @@ This autonomously:
    - If the Reviewer issues `APPROVED`, finalize the task and proceed to notification.
 
 5. **Outbound Notification**:
-   - When replying to an inbound event, execute the payload's `reply_action` (via MCP tool or CLI).
-   - For unsolicited proactive alerts, dispatch to the primary channel recorded in `channels.json`.
+   - When replying to an inbound event, prepare the reply for the payload's `reply_action` (MCP tool or CLI) and execute it after the user approves the draft.
+   - For proactive alerts, draft them for the primary channel recorded in `channels.json` under the same approval rule.
 
 ---
 
 ## Detailed References
 
+- Startup sweep, verification and plan format: see [startup-sweep.md](references/startup-sweep.md).
 - Decision & priority classification: see [triage-matrix.md](references/triage-matrix.md).
 - Full delegation state machine: see [dispatch-lifecycle.md](references/dispatch-lifecycle.md).

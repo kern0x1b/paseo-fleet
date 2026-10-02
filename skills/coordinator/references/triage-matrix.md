@@ -14,6 +14,6 @@ Use this matrix to classify incoming events and determine the required execution
 
 ## Action Rules
 
-1. **Immediate Acknowledgment**: When receiving a high-priority event from a chat channel (Slack, Telegram), send a brief acknowledgement via `reply_action` before starting heavy work (e.g. "Investigating pipeline failure on job #1042").
+1. **Immediate Acknowledgment**: When receiving a high-priority event from a chat channel (Slack, Telegram), draft a brief acknowledgement for `reply_action` (e.g. "Investigating pipeline failure on job #1042") and send it once the user approves; start the investigation without waiting.
 2. **Never Execute Large Refactors in Coordinator Session**: Coordinator maintains fleet state and high-level context. Heavy code editing, dependency installation, and running full test suites belongs in isolated Worker sessions.
 3. **Idempotency Guard**: Store processed event IDs in memory or state file to discard duplicate webhook deliveries.

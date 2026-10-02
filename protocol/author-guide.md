@@ -17,6 +17,8 @@ An adapter connects an external platform to the Paseo Fleet by implementing thre
    Accepts and records the active Coordinator agent ID via a CLI command (e.g. `<tool> set-coordinator <agent-id>`).
 3. **Registration Hook (Channel Manifest)**:
    Registers its capabilities in `~/.config/paseo/fleet/channels.json` either by calling `fleet channel add <name> ...` or writing directly to the manifest.
+4. **Snapshot Command**:
+   Prints everything currently waiting on the authenticated user as one JSON document (`<tool> snapshot [--since <iso>]`), so the coordinator can catch up on work that existed before its daemons started. See section 5 of the [protocol specification](fleet-protocol.md).
 
 ---
 
@@ -82,3 +84,18 @@ fleet channel add mytool --tool mytool_send_message --cli "mytool send" --type c
 ```
 
 Now the Fleet Coordinator automatically recognizes your tool as a first-class push channel!
+
+### Step 5: Provide `snapshot`
+
+Return what is waiting on the authenticated user, not what happened recently:
+
+- Use the platform's own notion of "waiting on me" (to-dos, review requests, assignments, unanswered direct messages and mentions).
+- Resolve the user from the credentials; do not ask for a user ID.
+- Put raw evidence into `snapshot.state` and leave judgement to the coordinator.
+- Report each failing source in `errors` and keep returning the rest.
+
+```bash
+mytool snapshot --since 2026-10-01T00:00:00Z
+```
+
+Add the adapter name to `adapters` in `~/.config/paseo/fleet/config.json` so `fleet sweep` includes it.

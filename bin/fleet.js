@@ -12,6 +12,7 @@ import {
   removeChannel,
 } from '../src/config.js';
 import { createEventEnvelope } from '../src/protocol.js';
+import { DEFAULT_ADAPTERS, parseSince, resolveSweepSince, runSweep } from '../src/sweep.js';
 
 const args = process.argv.slice(2);
 const command = args[0] || 'help';
@@ -98,6 +99,9 @@ COMMANDS:
   test-event [options]             Dispatch a synthetic test event envelope to the coordinator
                                    Options: --channel <name> --instance <id> --scope <id> --dry-run
   activate [agent-id]              Self-activate current agent ($PASEO_AGENT_ID) as coordinator and start daemons
+  sweep                            Collect everything currently waiting on you from every adapter as one JSON queue
+                                   Options: --since <iso|24h|3d> (default: since the last sweep, at least 24h back;
+                                            72h on the first run) --adapters <a,b> --no-cursor
   stop                             Stop all background fleet push daemons
   help                             Show this manual
 
@@ -108,6 +112,8 @@ EXAMPLES:
   fleet channel add slack:work --tool slack_send_message --cli "slack send" --type chat --instance T01WORK --scope C01DEV --primary
   fleet channel add gitlab:corp --tool gitlab_create_issue_note --cli "gitlab comment" --type forge --instance https://gitlab.corp.net --scope core/backend
   fleet status
+  fleet sweep
+  fleet sweep --since 3d --adapters gitlab
   fleet test-event --channel slack:work
 `);
 }
@@ -189,6 +195,21 @@ async function main() {
         console.log(`Fleet Coordinator successfully activated!`);
         console.log(`Active channels: ${active.join(', ') || 'none'}`);
         console.log(`Listening for inbound events.`);
+        console.log(`Next: run 'fleet sweep' to collect work that was already waiting before activation.`);
+        break;
+      }
+
+      case 'sweep': {
+        const config = loadConfig();
+        const since = flags.since
+          ? parseSince(flags.since)
+          : resolveSweepSince({ lastSweepAt: config.lastSweepAt });
+        const adapters = flags.adapters ? flags.adapters.split(',') : config.adapters || DEFAULT_ADAPTERS;
+        const sweep = await runSweep({ adapters, since });
+        if (!flags['no-cursor'] && sweep.sources.some((source) => source.ok)) {
+          saveConfig({ lastSweepAt: sweep.started_at });
+        }
+        console.log(JSON.stringify(sweep, null, 2));
         break;
       }
 
